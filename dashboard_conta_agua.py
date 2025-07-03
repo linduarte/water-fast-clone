@@ -83,6 +83,9 @@ if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     autenticar_usuarios()
     st.stop()
 
+# Aplicar fonte customizada
+inject_custom_font()
+
 # Logout
 if st.sidebar.button("🚪 Logout"):
     st.session_state.clear()
@@ -126,6 +129,47 @@ for apto in apartamentos:
 
 # Inputs principais
 st.title("💧 Dashboard de Conta de Água e Esgoto")
+
+# Seção de explicação sobre o cálculo
+with st.expander("ℹ️ Como funciona o cálculo de divisão da conta?", expanded=False):
+    st.markdown("""
+    ### 📊 **Metodologia de Cálculo**
+    
+    Este sistema divide a conta de água e esgoto de forma **justa e proporcional** entre os apartamentos, considerando:
+    
+    #### 🔢 **Componentes da Conta:**
+    - **Valor fixo (esgoto)**: Taxa fixa cobrada por apartamento
+    - **Valor variável (água)**: Baseado no consumo total do prédio
+    - **Recursos hídricos**: Taxas governamentais sobre água e esgoto
+    
+    #### ⚖️ **Método de Divisão:**
+    
+    **1. Valor Fixo por Apartamento:**
+    ```
+    Valor fixo base = Valor total fixo ÷ Número de apartamentos
+    ```
+    
+    **2. Valor Variável por Pessoa:**
+    ```
+    Valor por pessoa = Valor variável total ÷ Total de moradores
+    ```
+    
+    **3. Cálculo por Apartamento:**
+    ```
+    Valor do apartamento = Valor fixo corrigido + (Moradores × Valor por pessoa)
+    ```
+    
+    **4. Ajuste de Precisão:**
+    - O sistema faz um ajuste automático para garantir que a soma exata seja igual ao valor total da conta
+    - Esse ajuste é distribuído igualmente entre todos os apartamentos
+    
+    #### 🎯 **Vantagens desta Metodologia:**
+    - **Justa**: Quem tem mais moradores paga mais pela parte variável
+    - **Transparente**: Todos os cálculos são visíveis
+    - **Precisa**: Não há diferenças de centavos na divisão
+    - **Flexível**: Funciona para qualquer número de apartamentos e moradores
+    """)
+
 with st.expander("📅 Preencha os dados da conta"):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
