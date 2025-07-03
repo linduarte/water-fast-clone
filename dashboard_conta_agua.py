@@ -1,8 +1,91 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import json
+import os
+import bcrypt
 
+CONFIG_FILE = "config.json"
+
+
+# Função para aplicar a fonte Victor Mono Nerd Font
+def inject_custom_font():
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Victor+Mono&display=swap');
+
+        html, body, [class*="css"]  {
+            font-family: 'Victor Mono', monospace;
+            font-size: 16px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# Função para carregar dados de usuários
+def carregar_usuarios():
+    if not os.path.exists(CONFIG_FILE):
+        return {}
+    with open(CONFIG_FILE, "r") as f:
+        return json.load(f).get("users", {})
+
+
+# Função para salvar novo usuário
+def salvar_usuario(usuario, senha):
+    usuarios = carregar_usuarios()
+    hashed = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
+    usuarios[usuario] = hashed
+    with open(CONFIG_FILE, "w") as f:
+        json.dump({"users": usuarios}, f, indent=4)
+
+
+# Tela de login
+def autenticar_usuarios():
+    usuarios = carregar_usuarios()
+
+    st.title("🔐 Login")
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+
+    if st.button("Entrar"):
+        if usuario in usuarios and bcrypt.checkpw(
+            senha.encode(), usuarios[usuario].encode()
+        ):
+            st.session_state["autenticado"] = True
+            st.session_state["usuario"] = usuario
+            st.experimental_rerun()
+        else:
+            st.error("Usuário ou senha inválido.")
+
+
+# Verifica login
+if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
+    autenticar_usuarios()
+    st.stop()
+
+# Logout
+if st.sidebar.button("🚪 Logout"):
+    st.session_state.clear()
+    st.experimental_rerun()
+
+# Se autenticado
 st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
+st.success(f"Bem-vindo, {st.session_state['usuario']}!")
+
+# Cadastro de novo usuário (somente para admin)
+if st.session_state["usuario"] == "admin":
+    with st.expander("➕ Cadastrar novo usuário"):
+        novo_usuario = st.text_input("Novo usuário")
+        nova_senha = st.text_input("Nova senha", type="password")
+        if st.button("Cadastrar"):
+            if novo_usuario and nova_senha:
+                salvar_usuario(novo_usuario, nova_senha)
+                st.success(f"Usuário '{novo_usuario}' cadastrado com sucesso!")
+            else:
+                st.warning("Preencha ambos os campos.")
 
 # Sidebar – Configuração de moradores
 st.sidebar.header("👥 Moradores por Apartamento")
@@ -16,7 +99,7 @@ distribuicao_residentes = {
 
 # Inputs principais
 st.title("💧 Dashboard de Conta de Água e Esgoto")
-with st.expander("📥 Preencha os dados da conta"):
+with st.expander("📅 Preencha os dados da conta"):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         valor_fixo = st.number_input(
@@ -115,7 +198,7 @@ if st.button("🚀 Calcular"):
     # Download
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
-        "📥 Baixar resultado em CSV",
+        "📅 Baixar resultado em CSV",
         csv,
         file_name="resultado_conta_agua.csv",
         mime="text/csv",

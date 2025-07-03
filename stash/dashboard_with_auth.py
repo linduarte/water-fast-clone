@@ -7,12 +7,31 @@ import bcrypt
 
 CONFIG_FILE = "config.json"
 
+
+# Função para aplicar a fonte Victor Mono Nerd Font
+def inject_custom_font():
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Victor+Mono&display=swap');
+
+        html, body, [class*="css"]  {
+            font-family: 'Victor Mono', monospace;
+            font-size: 16px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # Função para carregar dados de usuários
 def carregar_usuarios():
     if not os.path.exists(CONFIG_FILE):
         return {}
     with open(CONFIG_FILE, "r") as f:
         return json.load(f).get("users", {})
+
 
 # Função para salvar novo usuário
 def salvar_usuario(usuario, senha):
@@ -21,6 +40,7 @@ def salvar_usuario(usuario, senha):
     usuarios[usuario] = hashed
     with open(CONFIG_FILE, "w") as f:
         json.dump({"users": usuarios}, f, indent=4)
+
 
 # Tela de login
 def autenticar_usuarios():
@@ -31,12 +51,15 @@ def autenticar_usuarios():
     senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if usuario in usuarios and bcrypt.checkpw(senha.encode(), usuarios[usuario].encode()):
+        if usuario in usuarios and bcrypt.checkpw(
+            senha.encode(), usuarios[usuario].encode()
+        ):
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
             st.experimental_rerun()
         else:
             st.error("Usuário ou senha inválido.")
+
 
 # Verifica login
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
