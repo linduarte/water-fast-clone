@@ -29,8 +29,15 @@ def inject_custom_font():
 def carregar_usuarios():
     if not os.path.exists(CONFIG_FILE):
         return {}
-    with open(CONFIG_FILE, "r") as f:
-        return json.load(f).get("users", {})
+
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f).get("users", {})
+    except json.JSONDecodeError:
+        st.error(
+            "Erro ao ler o config.json. Verifique se o arquivo está formatado corretamente."
+        )
+        return {}
 
 
 # Função para salvar novo usuário
@@ -40,6 +47,13 @@ def salvar_usuario(usuario, senha):
     usuarios[usuario] = hashed
     with open(CONFIG_FILE, "w") as f:
         json.dump({"users": usuarios}, f, indent=4)
+
+
+# Função para recriar config.json padrão
+def criar_config_padrao():
+    if not os.path.exists(CONFIG_FILE):
+        salvar_usuario("admin", "admin123")
+        st.info("Arquivo config.json criado com usuário padrão: admin/admin123")
 
 
 # Tela de login
@@ -56,10 +70,13 @@ def autenticar_usuarios():
         ):
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Usuário ou senha inválido.")
 
+
+# Criar config inicial se não existir
+criar_config_padrao()
 
 # Verifica login
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
@@ -69,7 +86,7 @@ if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
 # Logout
 if st.sidebar.button("🚪 Logout"):
     st.session_state.clear()
-    st.experimental_rerun()
+    st.rerun()
 
 # Se autenticado
 st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
@@ -86,6 +103,13 @@ if st.session_state["usuario"] == "admin":
                 st.success(f"Usuário '{novo_usuario}' cadastrado com sucesso!")
             else:
                 st.warning("Preencha ambos os campos.")
+
+    with st.expander("📋 Ver todos os usuários cadastrados"):
+        usuarios = carregar_usuarios()
+        if usuarios:
+            st.table(pd.DataFrame(usuarios.keys(), columns=["Usuários"]))
+        else:
+            st.info("Nenhum usuário encontrado.")
 
 # Sidebar – Configuração de moradores
 st.sidebar.header("👥 Moradores por Apartamento")
