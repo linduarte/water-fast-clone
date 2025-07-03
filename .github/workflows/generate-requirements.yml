@@ -1,18 +1,18 @@
-name: Generate requirements.txt from pyproject.toml
+name: Generate requirements.txt
 
 on:
   push:
-    branches: [main]
-    paths:
-      - pyproject.toml
-      - uv.lock
-  workflow_dispatch:  # permite executar manualmente também
+    branches: [ main ]
+    paths: [ 'pyproject.toml' ]
+  pull_request:
+    branches: [ main ]
+    paths: [ 'pyproject.toml' ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    name: Compile requirements.txt
+  generate-requirements:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -25,10 +25,15 @@ jobs:
           python-version: '3.12'
 
       - name: Install uv
-        run: pip install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Generate requirements.txt
         run: uv pip compile pyproject.toml -o requirements.txt
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Commit and push if changed
         uses: stefanzweifel/git-auto-commit-action@v5
