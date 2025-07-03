@@ -35,11 +35,15 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config --global user.name 'linduarte'
+          git config --global user.email '140444382+linduarte@users.noreply.github.com'
 
       - name: Commit and push if changed
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: 🤖 Auto-update requirements.txt from pyproject.toml
-          branch: main
+        run: |
+          git add requirements.txt
+          if git diff --staged --quiet; then
+            echo "No changes to requirements.txt"
+          else
+            git commit -m "🤖 Auto-update requirements.txt from pyproject.toml"
+            git push
+          fi
