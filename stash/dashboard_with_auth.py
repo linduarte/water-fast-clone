@@ -1,42 +1,68 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 import json
 import os
+import bcrypt
 
-# Caminho para o arquivo de configuração
 CONFIG_FILE = "config.json"
 
-# Função de autenticação
-def autenticar_usuarios():
+# Função para carregar dados de usuários
+def carregar_usuarios():
     if not os.path.exists(CONFIG_FILE):
-        st.error("Arquivo de configuração de usuários não encontrado.")
-        st.stop()
-
+        return {}
     with open(CONFIG_FILE, "r") as f:
-        config = json.load(f)
+        return json.load(f).get("users", {})
 
-    usuarios = config.get("users", {})
+# Função para salvar novo usuário
+def salvar_usuario(usuario, senha):
+    usuarios = carregar_usuarios()
+    hashed = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
+    usuarios[usuario] = hashed
+    with open(CONFIG_FILE, "w") as f:
+        json.dump({"users": usuarios}, f, indent=4)
+
+# Tela de login
+def autenticar_usuarios():
+    usuarios = carregar_usuarios()
 
     st.title("🔐 Login")
     usuario = st.text_input("Usuário")
     senha = st.text_input("Senha", type="password")
 
     if st.button("Entrar"):
-        if usuario in usuarios and senha == usuarios[usuario]:
+        if usuario in usuarios and bcrypt.checkpw(senha.encode(), usuarios[usuario].encode()):
             st.session_state["autenticado"] = True
             st.session_state["usuario"] = usuario
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Usuário ou senha inválido.")
 
-# Verifica se o usuário já está autenticado
+# Verifica login
 if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     autenticar_usuarios()
     st.stop()
 
-# Se autenticado, mostra o conteúdo protegido
+# Logout
+if st.sidebar.button("🚪 Logout"):
+    st.session_state.clear()
+    st.experimental_rerun()
+
+# Se autenticado
 st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
 st.success(f"Bem-vindo, {st.session_state['usuario']}!")
+
+# Cadastro de novo usuário (somente para admin)
+if st.session_state["usuario"] == "admin":
+    with st.expander("➕ Cadastrar novo usuário"):
+        novo_usuario = st.text_input("Novo usuário")
+        nova_senha = st.text_input("Nova senha", type="password")
+        if st.button("Cadastrar"):
+            if novo_usuario and nova_senha:
+                salvar_usuario(novo_usuario, nova_senha)
+                st.success(f"Usuário '{novo_usuario}' cadastrado com sucesso!")
+            else:
+                st.warning("Preencha ambos os campos.")
 
 # Sidebar – Configuração de moradores
 st.sidebar.header("👥 Moradores por Apartamento")
@@ -134,10 +160,17 @@ if st.button("🚀 Calcular"):
         st.bar_chart(chart_data)
 
     with colg2:
-        st.subheader("👥 Distribuição de moradores")
+        st.subheader("🥧 Distribuição de moradores")
         moradores_data = df.set_index("Apartamento")["Moradores"]
-        # Using Streamlit's native bar chart for better compatibility
-        st.bar_chart(moradores_data)
+        fig, ax = plt.subplots()
+        ax.pie(
+            moradores_data,
+            labels=moradores_data.index,
+            autopct="%1.1f%%",
+            startangle=140,
+        )
+        ax.axis("equal")
+        st.pyplot(fig)
 
     # Download
     csv = df.to_csv(index=False).encode("utf-8")
