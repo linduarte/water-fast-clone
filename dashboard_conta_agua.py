@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import json
 import os
 import bcrypt
@@ -254,17 +253,10 @@ if st.button("🚀 Calcular"):
         st.bar_chart(chart_data)
 
     with colg2:
-        st.subheader("🥧 Distribuição de moradores")
+        st.subheader("👥 Distribuição de moradores")
         moradores_data = df.set_index("Apartamento")["Moradores"]
-        fig, ax = plt.subplots()
-        ax.pie(
-            moradores_data,
-            labels=moradores_data.index,
-            autopct="%1.1f%%",
-            startangle=140,
-        )
-        ax.axis("equal")
-        st.pyplot(fig)
+        # Using Streamlit's native bar chart for better compatibility
+        st.bar_chart(moradores_data)
 
     # Download
     csv = df.to_csv(index=False).encode("utf-8")
