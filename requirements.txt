@@ -14,7 +14,7 @@ bcrypt==4.3.0
     # via water-fast (pyproject.toml)
 blinker==1.9.0
     # via streamlit
-cachetools==6.1.0
+cachetools==5.5.2
     # via streamlit
 certifi==2025.6.15
     # via requests
@@ -24,14 +24,8 @@ click==8.2.1
     # via streamlit
 colorama==0.4.6
     # via click
-contourpy==1.3.2
-    # via matplotlib
-cycler==0.12.1
-    # via matplotlib
 fastapi==0.115.14
     # via water-fast (pyproject.toml)
-fonttools==4.58.4
-    # via matplotlib
 gitdb==4.0.12
     # via gitpython
 gitpython==3.1.44
@@ -48,35 +42,30 @@ jsonschema==4.24.0
     # via altair
 jsonschema-specifications==2025.4.1
     # via jsonschema
-kiwisolver==1.4.8
-    # via matplotlib
+markdown-it-py==3.0.0
+    # via rich
 markupsafe==3.0.2
     # via jinja2
-matplotlib==3.10.3
-    # via water-fast (pyproject.toml)
+mdurl==0.1.2
+    # via markdown-it-py
 narwhals==1.44.0
     # via altair
-numpy==2.3.1
+numpy==1.26.4
     # via
-    #   contourpy
-    #   matplotlib
     #   pandas
     #   pydeck
     #   streamlit
-packaging==25.0
+packaging==23.2
     # via
     #   altair
-    #   matplotlib
     #   streamlit
 pandas==2.3.0
     # via
     #   water-fast (pyproject.toml)
     #   streamlit
-pillow==11.2.1
-    # via
-    #   matplotlib
-    #   streamlit
-protobuf==6.31.1
+pillow==10.4.0
+    # via streamlit
+protobuf==4.25.8
     # via streamlit
 pyarrow==20.0.0
     # via streamlit
@@ -88,12 +77,10 @@ pydantic-core==2.33.2
     # via pydantic
 pydeck==0.9.1
     # via streamlit
-pyparsing==3.2.3
-    # via matplotlib
+pygments==2.19.2
+    # via rich
 python-dateutil==2.9.0.post0
-    # via
-    #   matplotlib
-    #   pandas
+    # via pandas
 pytz==2025.2
     # via pandas
 referencing==0.36.2
@@ -101,6 +88,8 @@ referencing==0.36.2
     #   jsonschema
     #   jsonschema-specifications
 requests==2.32.4
+    # via streamlit
+rich==13.9.4
     # via streamlit
 rpds-py==0.25.1
     # via
@@ -116,7 +105,7 @@ starlette==0.46.2
     # via fastapi
 streamlit==1.32.0
     # via water-fast (pyproject.toml)
-tenacity==9.1.2
+tenacity==8.5.0
     # via streamlit
 toml==0.10.2
     # via streamlit
