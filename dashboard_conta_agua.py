@@ -8,6 +8,23 @@ import bcrypt
 CONFIG_FILE = "config.json"
 
 
+# Função para aplicar a fonte Victor Mono Nerd Font
+def inject_custom_font():
+    st.markdown(
+        """
+        <style>
+        @import url('https://fonts.googleapis.com/css2?family=Victor+Mono&display=swap');
+
+        html, body, [class*="css"]  {
+            font-family: 'Victor Mono', monospace;
+            font-size: 16px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # Função para carregar dados de usuários
 def carregar_usuarios():
     if not os.path.exists(CONFIG_FILE):
