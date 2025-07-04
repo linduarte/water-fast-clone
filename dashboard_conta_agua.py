@@ -133,8 +133,9 @@ st.title("💧 Dashboard de Conta de Água e Esgoto")
 with st.expander("ℹ️ Como funciona o cálculo de divisão da conta?", expanded=False):
     st.markdown("""
     ### 📊 **Metodologia de Cálculo**
-    
-    Este sistema divide a conta de água e esgoto de forma **justa e proporcional** entre os apartamentos, considerando:
+                
+        
+    Este sistema, sem 'medidores individuais', divide a conta de água e esgoto de forma **justa e proporcional** entre os apartamentos, considerando:
     
     #### 🔢 **Componentes da Conta:**
     - **Valor fixo (esgoto)**: Taxa fixa cobrada por apartamento
