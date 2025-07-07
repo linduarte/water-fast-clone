@@ -22,8 +22,6 @@ charset-normalizer==3.4.2
     # via requests
 click==8.2.1
     # via streamlit
-colorama==0.4.6
-    # via click
 fastapi==0.115.14
     # via water-fast (pyproject.toml)
 gitdb==4.0.12
