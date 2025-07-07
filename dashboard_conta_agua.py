@@ -1,27 +1,13 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 import json
 import os
 import bcrypt
 
+st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
+
 CONFIG_FILE = "config.json"
-
-
-# Função para aplicar a fonte Victor Mono Nerd Font
-def inject_custom_font():
-    st.markdown(
-        """
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Victor+Mono&display=swap');
-
-        html, body, [class*="css"]  {
-            font-family: 'Victor Mono', monospace;
-            font-size: 16px;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 # Função para carregar dados de usuários
@@ -82,16 +68,12 @@ if "autenticado" not in st.session_state or not st.session_state["autenticado"]:
     autenticar_usuarios()
     st.stop()
 
-# Aplicar fonte customizada
-inject_custom_font()
-
 # Logout
 if st.sidebar.button("🚪 Logout"):
     st.session_state.clear()
     st.rerun()
 
 # Se autenticado
-st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
 st.success(f"Bem-vindo, {st.session_state['usuario']}!")
 
 # Cadastro de novo usuário (somente para admin)
@@ -114,84 +96,78 @@ if st.session_state["usuario"] == "admin":
             st.info("Nenhum usuário encontrado.")
 
 # Sidebar – Configuração de moradores
-distribuicao_residentes = {}
-st.sidebar.header("🛋️ Configuração do Condomínio")
-num_apts = st.sidebar.number_input(
-    "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
+st.sidebar.header("🏢 Apartamentos")
+modo_lista = st.sidebar.radio(
+    "Como deseja definir os apartamentos?",
+    ["Gerar automaticamente", "Importar de JSON"],
 )
-apartamentos = [f"apartamento {str(i + 1).zfill(2)}" for i in range(num_apts)]
-st.sidebar.header("👥 Moradores por Apartamento")
-for apto in apartamentos:
-    distribuicao_residentes[apto] = st.sidebar.number_input(
-        apto, min_value=0, value=2, step=1
+
+if modo_lista == "Gerar automaticamente":
+    num_apts = st.sidebar.number_input(
+        "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
     )
+    apartamentos = [f"{str(i + 1).zfill(2)}" for i in range(num_apts)]
+else:
+    json_text = st.sidebar.text_area(
+        "Cole a lista JSON:", height=150, placeholder='Ex: ["101", "102", "201", "202"]'
+    )
+    try:
+        apartamentos = json.loads(json_text)
+        if not isinstance(apartamentos, list):
+            raise ValueError
+    except Exception:
+        st.sidebar.error("Formato inválido. Forneça uma lista JSON válida.")
+        apartamentos = []
+
+st.sidebar.header("👥 Moradores por Apartamento")
+distribuicao_residentes = {}
+for apto in apartamentos:
+    valor = st.sidebar.text_input(
+        f"{apto}", value="2", placeholder="Digite o número de moradores"
+    )
+    if not valor.isdigit() or int(valor) < 0:
+        st.sidebar.error(
+            f"Número inválido para o apartamento {apto}. Use apenas inteiros positivos."
+        )
+    distribuicao_residentes[apto] = valor
 
 # Inputs principais
 st.title("💧 Dashboard de Conta de Água e Esgoto")
-
-# Seção de explicação sobre o cálculo
-with st.expander("ℹ️ Como funciona o cálculo de divisão da conta?", expanded=False):
-    st.markdown("""
-    ### 📊 **Metodologia de Cálculo**
-                
-        
-    Este sistema, sem 'medidores individuais', divide a conta de água e esgoto de forma **justa e proporcional** entre os apartamentos, considerando:
-    
-    #### 🔢 **Componentes da Conta:**
-    - **Valor fixo (esgoto)**: Taxa fixa cobrada por apartamento
-    - **Valor variável (água)**: Baseado no consumo total do prédio
-    - **Recursos hídricos**: Taxas governamentais sobre água e esgoto
-    
-    #### ⚖️ **Método de Divisão:**
-    
-    **1. Valor Fixo por Apartamento:**
-    ```
-    Valor fixo base = Valor total fixo ÷ Número de apartamentos
-    ```
-    
-    **2. Valor Variável por Pessoa:**
-    ```
-    Valor por pessoa = Valor variável total ÷ Total de moradores
-    ```
-    
-    **3. Cálculo por Apartamento:**
-    ```
-    Valor do apartamento = Valor fixo corrigido + (Moradores × Valor por pessoa)
-    ```
-    
-    **4. Ajuste de Precisão:**
-    - O sistema faz um ajuste automático para garantir que a soma exata seja igual ao valor total da conta
-    - Esse ajuste é distribuído igualmente entre todos os apartamentos
-    
-    #### 🎯 **Vantagens desta Metodologia:**
-    - **Justa**: Quem tem mais moradores paga mais pela parte variável
-    - **Transparente**: Todos os cálculos são visíveis
-    - **Precisa**: Não há diferenças de centavos na divisão
-    - **Flexível**: Funciona para qualquer número de apartamentos e moradores
-    """)
-
 with st.expander("📅 Preencha os dados da conta"):
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        valor_fixo = st.number_input(
-            "Valor de esgoto (fixo)", min_value=0.0, format="%.2f"
+        val1 = st.text_input(
+            "Valor de esgoto (fixo)", value="0.00", placeholder="Ex: 150.00"
+        )
+        valor_fixo = (
+            float(val1) if val1.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
         )
     with col2:
-        valor_variavel = st.number_input(
-            "Valor de água (variável)", min_value=0.0, format="%.2f"
+        val2 = st.text_input(
+            "Valor de água (variável)", value="0.00", placeholder="Ex: 180.50"
+        )
+        valor_variavel = (
+            float(val2) if val2.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
         )
     with col3:
-        recursos_hidr_agua = st.number_input(
-            "Recursos hídricos (água)", min_value=0.0, format="%.2f"
+        val3 = st.text_input(
+            "Recursos hídricos (água)", value="0.00", placeholder="Ex: 25.00"
+        )
+        recursos_hidr_agua = (
+            float(val3) if val3.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
         )
     with col4:
-        recursos_hidr_esg = st.number_input(
-            "Recursos hídricos (esgoto)", min_value=0.0, format="%.2f"
+        val4 = st.text_input(
+            "Recursos hídricos (esgoto)", value="0.00", placeholder="Ex: 30.00"
+        )
+        recursos_hidr_esg = (
+            float(val4) if val4.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
         )
 
 
 # Cálculo principal
 def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg):
+    distrib = {k: int(v) for k, v in distrib.items() if v.isdigit()}
     n_apts = len(distrib)
     n_residentes = sum(distrib.values()) or 1
     total = valor_fixo + valor_variavel + rec_agua + rec_esg
@@ -245,19 +221,18 @@ if st.button("🚀 Calcular"):
     st.subheader("🏠 Distribuição por apartamento")
     st.dataframe(df, use_container_width=True)
 
-    # Gráficos
+    # Gráficos com Plotly
     colg1, colg2 = st.columns(2)
 
     with colg1:
         st.subheader("📊 Valor pago por apartamento")
-        chart_data = df.set_index("Apartamento")["Valor Total (R$)"]
-        st.bar_chart(chart_data)
+        fig_bar = px.bar(df, x="Apartamento", y="Valor Total (R$)", text_auto=True)
+        st.plotly_chart(fig_bar, use_container_width=True)
 
     with colg2:
-        st.subheader("👥 Distribuição de moradores")
-        moradores_data = df.set_index("Apartamento")["Moradores"]
-        # Using Streamlit's native bar chart for better compatibility
-        st.bar_chart(moradores_data)
+        st.subheader("🥧 Distribuição de moradores")
+        fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
+        st.plotly_chart(fig_pie, use_container_width=True)
 
     # Download
     csv = df.to_csv(index=False).encode("utf-8")
