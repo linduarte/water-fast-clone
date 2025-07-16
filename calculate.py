@@ -41,6 +41,7 @@ def calcular_conta_agua(
     total_corrigido = 0
     for apto, moradores in distribuicao_residentes.items():
         valor_total = valor_fixo_corrigido + valor_variavel_por_residente * moradores
+        # pyrefly: ignore  # missing-attribute
         resultado["detalhes_por_apartamento"][apto] = round(valor_total, 2)
         total_corrigido += valor_total
 

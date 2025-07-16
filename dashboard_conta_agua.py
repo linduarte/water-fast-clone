@@ -91,6 +91,7 @@ if st.session_state["usuario"] == "admin":
     with st.expander("📋 Ver todos os usuários cadastrados"):
         usuarios = carregar_usuarios()
         if usuarios:
+            # pyrefly: ignore  # bad-argument-type
             st.table(pd.DataFrame(usuarios.keys(), columns=["Usuários"]))
         else:
             st.info("Nenhum usuário encontrado.")
@@ -106,6 +107,7 @@ if modo_lista == "Gerar automaticamente":
     num_apts = st.sidebar.number_input(
         "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
     )
+    # pyrefly: ignore  # no-matching-overload
     apartamentos = [f"{str(i + 1).zfill(2)}" for i in range(num_apts)]
 else:
     json_text = st.sidebar.text_area(
@@ -235,6 +237,7 @@ if st.button("🚀 Calcular"):
         st.plotly_chart(fig_pie, use_container_width=True)
 
     # Download
+    # pyrefly: ignore  # missing-attribute
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         "📅 Baixar resultado em CSV",

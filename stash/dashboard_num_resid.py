@@ -90,6 +90,7 @@ if st.session_state["usuario"] == "admin":
     with st.expander("📋 Ver todos os usuários cadastrados"):
         usuarios = carregar_usuarios()
         if usuarios:
+            # pyrefly: ignore  # bad-argument-type
             st.table(pd.DataFrame(usuarios.keys(), columns=["Usuários"]))
         else:
             st.info("Nenhum usuário encontrado.")
@@ -100,6 +101,7 @@ st.sidebar.header("🛋️ Configuração do Condomínio")
 num_apts = st.sidebar.number_input(
     "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
 )
+# pyrefly: ignore  # no-matching-overload
 apartamentos = [f"apartamento {str(i + 1).zfill(2)}" for i in range(num_apts)]
 st.sidebar.header("👥 Moradores por Apartamento")
 for apto in apartamentos:
@@ -189,15 +191,18 @@ if st.button("🚀 Calcular"):
 
     with colg1:
         st.subheader("📊 Valor pago por apartamento")
+        # pyrefly: ignore  # missing-attribute
         chart_data = df.set_index("Apartamento")["Valor Total (R$)"]
         st.bar_chart(chart_data)
 
     with colg2:
         st.subheader("🥧 Distribuição de moradores")
+        # pyrefly: ignore  # missing-attribute
         moradores_data = df.set_index("Apartamento")["Moradores"]
         fig, ax = plt.subplots()
         ax.pie(
             moradores_data,
+            # pyrefly: ignore  # bad-argument-type
             labels=moradores_data.index,
             autopct="%1.1f%%",
             startangle=140,
@@ -206,6 +211,7 @@ if st.button("🚀 Calcular"):
         st.pyplot(fig)
 
     # Download
+    # pyrefly: ignore  # missing-attribute
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button(
         "📅 Baixar resultado em CSV",
