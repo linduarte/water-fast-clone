@@ -12,3 +12,9 @@ dependencies = [
     "pydantic>=2.11.7",
     "streamlit==1.32.0",
 ]
+
+[tool]
+
+[tool.pyrefly]
+project-includes = ["**/*"]
+project-excludes = ['**/*venv/**\*']
