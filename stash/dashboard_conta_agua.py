@@ -192,10 +192,10 @@ def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg):
 
     return {
         "df": pd.DataFrame(detalhes).sort_values("Apartamento"),
-        "valor_fixo_corrigido": round(v_fixo_corrigido, 2),
-        "valor_variavel_por_residente": round(v_var_pessoa, 2),
-        "total_arrecadado": round(total_pago, 2),
-        "valor_total_da_conta": round(total, 2),
+        "valor_fixo_corrigido": round(float(v_fixo_corrigido), 2),
+        "valor_variavel_por_residente": round(float(v_var_pessoa), 2),
+        "total_arrecadado": round(float(total_pago), 2),
+        "valor_total_da_conta": round(float(total), 2),
         "total_residentes": n_residentes,
     }
 
