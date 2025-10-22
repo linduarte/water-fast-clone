@@ -1,47 +1,13 @@
-import json
-import os
-from typing import Any, Dict
-
-import bcrypt
+import streamlit as st
 import pandas as pd
 import plotly.express as px
-import streamlit as st
-
+import json
+import os
+import bcrypt
 
 st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
 
 CONFIG_FILE = "config.json"
-
-
-# ---------------------- Helpers ----------------------
-def parse_float(text: str, default: float = 0.0) -> float:
-    """Safely parse a float from text (accepts comma as decimal)."""
-    if not isinstance(text, str):
-        return default
-    t = text.strip().replace("\u00a0", "")
-    t = t.replace(",", ".")
-    try:
-        return float(t)
-    except Exception:
-        return default
-
-
-def to_positive_int(val) -> int | None:
-    """Try to convert val to a non-negative int. Return None if invalid."""
-    try:
-        if isinstance(val, int):
-            v = val
-        else:
-            v = int(str(val).strip())
-        if v >= 0:
-            return v
-    except Exception:
-        return None
-    return None
-
-
-def format_currency(value: float) -> str:
-    return f"R$ {value:.2f}"
 
 
 # Função para carregar dados de usuários
@@ -130,7 +96,6 @@ if st.session_state["usuario"] == "admin":
         else:
             st.info("Nenhum usuário encontrado.")
 
-
 # Sidebar – Configuração de moradores
 st.sidebar.header("🏢 Apartamentos")
 modo_lista = st.sidebar.radio(
@@ -162,9 +127,11 @@ for apto in apartamentos:
     valor = st.sidebar.text_input(
         f"{apto}", value="2", placeholder="Digite o número de moradores"
     )
-    # store raw value; we'll validate/convert in calcular()
+    if not valor.isdigit() or int(valor) < 0:
+        st.sidebar.error(
+            f"Número inválido para o apartamento {apto}. Use apenas inteiros positivos."
+        )
     distribuicao_residentes[apto] = valor
-
 
 # Inputs principais
 st.title("💧 Dashboard de Conta de Água e Esgoto")
@@ -174,83 +141,61 @@ with st.expander("📅 Preencha os dados da conta"):
         val1 = st.text_input(
             "Valor de esgoto (fixo)", value="0.00", placeholder="Ex: 150.00"
         )
-        valor_fixo = parse_float(val1)
+        valor_fixo = (
+            float(val1) if val1.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
+        )
     with col2:
         val2 = st.text_input(
             "Valor de água (variável)", value="0.00", placeholder="Ex: 180.50"
         )
-        valor_variavel = parse_float(val2)
+        valor_variavel = (
+            float(val2) if val2.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
+        )
     with col3:
         val3 = st.text_input(
             "Recursos hídricos (água)", value="0.00", placeholder="Ex: 25.00"
         )
-        recursos_hidr_agua = parse_float(val3)
+        recursos_hidr_agua = (
+            float(val3) if val3.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
+        )
     with col4:
         val4 = st.text_input(
             "Recursos hídricos (esgoto)", value="0.00", placeholder="Ex: 30.00"
         )
-        recursos_hidr_esg = parse_float(val4)
+        recursos_hidr_esg = (
+            float(val4) if val4.replace(",", ".").replace(".", "", 1).isdigit() else 0.0
+        )
 
 
 # Cálculo principal
-def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg) -> Dict[str, Any]:
-    # Convert inputs to valid integers; ignore invalid entries
-    distrib_clean: Dict[str, int] = {}
-    for k, v in distrib.items():
-        iv = to_positive_int(v)
-        if iv is not None:
-            distrib_clean[k] = iv
-
-    n_apts = len(distrib_clean)
+def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg):
+    distrib = {k: int(v) for k, v in distrib.items() if v.isdigit()}
+    n_apts = len(distrib)
+    n_residentes = sum(distrib.values()) or 1
     total = valor_fixo + valor_variavel + rec_agua + rec_esg
 
-    # If there are no valid apartments, return an empty, safe result
-    if n_apts == 0:
-        # explicit empty DataFrame with typed Series avoids static-type warnings
-        empty_df = pd.DataFrame(
-            {
-                "Apartamento": pd.Series(dtype=object),
-                "Moradores": pd.Series(dtype=int),
-                "Valor Total (R$)": pd.Series(dtype=float),
-            }
-        )
-        return {
-            "df": empty_df,
-            "valor_fixo_corrigido": 0.0,
-            "valor_variavel_por_residente": 0.0,
-            "total_arrecadado": 0.0,
-            "valor_total_da_conta": round(float(total), 2),
-            "total_residentes": 0,
-        }
+    v_fixo_base = valor_fixo / n_apts
+    v_var_pessoa = valor_variavel / n_residentes
 
-    n_residentes = sum(distrib_clean.values())
-
-    v_fixo_base = valor_fixo / n_apts if n_apts > 0 else 0.0
-    v_var_pessoa = valor_variavel / n_residentes if n_residentes > 0 else 0.0
-
-    inicial = sum(v_fixo_base + v_var_pessoa * r for r in distrib_clean.values())
-    ajuste = (total - inicial) / n_apts if n_apts > 0 else 0.0
+    inicial = sum(v_fixo_base + v_var_pessoa * r for r in distrib.values())
+    ajuste = (total - inicial) / n_apts
     v_fixo_corrigido = v_fixo_base + ajuste
 
     detalhes = []
-    for apto, moradores in distrib_clean.items():
-        # ensure plain python types so static analysis is happy
-        moradores_int = int(moradores)
-        valor = round(v_fixo_corrigido + moradores_int * v_var_pessoa, 2)
-        valor = float(valor)
+    total_pago = 0
+    for apto, moradores in distrib.items():
+        valor = round(v_fixo_corrigido + moradores * v_var_pessoa, 2)
         detalhes.append(
-            {"Apartamento": apto, "Moradores": moradores_int, "Valor Total (R$)": valor}
+            {"Apartamento": apto, "Moradores": moradores, "Valor Total (R$)": valor}
         )
-
-    # compute total as a pure python float (avoid incremental += type issues)
-    total_pago = float(sum(d["Valor Total (R$)"] for d in detalhes))
+        total_pago += valor
 
     return {
         "df": pd.DataFrame(detalhes).sort_values("Apartamento"),
         "valor_fixo_corrigido": round(v_fixo_corrigido, 2),
         "valor_variavel_por_residente": round(v_var_pessoa, 2),
-        "total_arrecadado": round(float(total_pago), 2),
-        "valor_total_da_conta": round(float(total), 2),
+        "total_arrecadado": round(total_pago, 2),
+        "valor_total_da_conta": round(total, 2),
         "total_residentes": n_residentes,
     }
 
@@ -265,53 +210,38 @@ if st.button("🚀 Calcular"):
     )
     df = resultado["df"]
 
-    # If result is empty (no valid apartments), show a helpful message
-    if df.empty:
-        st.warning(
-            "Nenhum apartamento válido encontrado. Verifique os valores informados no painel lateral."
-        )
-        # still show total account value
-        st.metric(
-            "💰 Valor total da conta",
-            format_currency(resultado["valor_total_da_conta"]),
-        )
-    else:
-        # Métricas
-        col1, col2, col3 = st.columns(3)
-        col1.metric(
-            "🔢 Valor fixo por apto", format_currency(resultado["valor_fixo_corrigido"])
-        )
-        col2.metric(
-            "👤 Valor variável por residente",
-            format_currency(resultado["valor_variavel_por_residente"]),
-        )
-        col3.metric(
-            "💰 Valor total da conta",
-            format_currency(resultado["valor_total_da_conta"]),
-        )
+    # Métricas
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🔢 Valor fixo por apto", f"R$ {resultado['valor_fixo_corrigido']}")
+    col2.metric(
+        "👤 Valor variável por residente",
+        f"R$ {resultado['valor_variavel_por_residente']}",
+    )
+    col3.metric("💰 Valor total da conta", f"R$ {resultado['valor_total_da_conta']}")
 
-        # Tabela
-        st.subheader("🏠 Distribuição por apartamento")
-        st.dataframe(df, use_container_width=True)
+    # Tabela
+    st.subheader("🏠 Distribuição por apartamento")
+    st.dataframe(df, use_container_width=True)
 
-        # Gráficos com Plotly
-        colg1, colg2 = st.columns(2)
+    # Gráficos com Plotly
+    colg1, colg2 = st.columns(2)
 
-        with colg1:
-            st.subheader("📊 Valor pago por apartamento")
-            fig_bar = px.bar(df, x="Apartamento", y="Valor Total (R$)", text_auto=True)
-            st.plotly_chart(fig_bar, use_container_width=True)
+    with colg1:
+        st.subheader("📊 Valor pago por apartamento")
+        fig_bar = px.bar(df, x="Apartamento", y="Valor Total (R$)", text_auto=True)
+        st.plotly_chart(fig_bar, use_container_width=True)
 
-        with colg2:
-            st.subheader("🥧 Distribuição de moradores")
-            fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
-            st.plotly_chart(fig_pie, use_container_width=True)
+    with colg2:
+        st.subheader("🥧 Distribuição de moradores")
+        fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
+        st.plotly_chart(fig_pie, use_container_width=True)
 
-        # Download
-        csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "📅 Baixar resultado em CSV",
-            csv,
-            file_name="resultado_conta_agua.csv",
-            mime="text/csv",
-        )
+    # Download
+    # pyrefly: ignore  # missing-attribute
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📅 Baixar resultado em CSV",
+        csv,
+        file_name="resultado_conta_agua.csv",
+        mime="text/csv",
+    )
