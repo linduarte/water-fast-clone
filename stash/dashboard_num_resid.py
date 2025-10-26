@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 import json
 import os
 import bcrypt
@@ -157,7 +157,7 @@ def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg):
         "df": pd.DataFrame(detalhes).sort_values("Apartamento"),
         "valor_fixo_corrigido": round(v_fixo_corrigido, 2),
         "valor_variavel_por_residente": round(v_var_pessoa, 2),
-        "total_arrecadado": round(total_pago, 2),
+    "total_arrecadado": round(float(total_pago), 2),
         "valor_total_da_conta": round(total, 2),
         "total_residentes": n_residentes,
     }
@@ -197,18 +197,10 @@ if st.button("🚀 Calcular"):
 
     with colg2:
         st.subheader("🥧 Distribuição de moradores")
+        # Use Plotly for robust rendering in cloud environments
         # pyrefly: ignore  # missing-attribute
-        moradores_data = df.set_index("Apartamento")["Moradores"]
-        fig, ax = plt.subplots()
-        ax.pie(
-            moradores_data,
-            # pyrefly: ignore  # bad-argument-type
-            labels=moradores_data.index,
-            autopct="%1.1f%%",
-            startangle=140,
-        )
-        ax.axis("equal")
-        st.pyplot(fig)
+        fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
+        st.plotly_chart(fig_pie, use_container_width=True)
 
     # Download
     # pyrefly: ignore  # missing-attribute
