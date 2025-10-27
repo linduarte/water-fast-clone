@@ -315,7 +315,7 @@ if st.button("🚀 Calcular"):
 
         # Tabela
         st.subheader("🏠 Distribuição por apartamento")
-        st.dataframe(df, width='stretch')
+        st.dataframe(df, use_container_width=True)
 
         # Gráficos com Plotly
         colg1, colg2 = st.columns(2)
@@ -323,12 +323,12 @@ if st.button("🚀 Calcular"):
         with colg1:
             st.subheader("📊 Valor pago por apartamento")
             fig_bar = px.bar(df, x="Apartamento", y="Valor Total (R$)", text_auto=True)
-            st.plotly_chart(fig_bar, width='stretch')
+            st.plotly_chart(fig_bar, use_container_width=True)
 
         with colg2:
             st.subheader("🥧 Distribuição de moradores")
             fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
-            st.plotly_chart(fig_pie, width='stretch')
+            st.plotly_chart(fig_pie, use_container_width=True)
 
         # Download
         if isinstance(df, pd.DataFrame):
