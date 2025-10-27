@@ -1,11 +1,22 @@
 import json
 import os
-from typing import Any, Dict
+from typing import Dict, TypedDict
 
 import bcrypt
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+
+# TypedDict for calculation result
+class CalculoResult(TypedDict):
+    df: 'pd.DataFrame'
+    valor_fixo_corrigido: float
+    valor_variavel_por_residente: float
+    total_arrecadado: float
+    valor_total_da_conta: float
+    total_residentes: int
+
+
 
 
 st.set_page_config(page_title="Dashboard: Conta de Água", layout="wide", page_icon="💧")
@@ -26,7 +37,7 @@ def parse_float(text: str, default: float = 0.0) -> float:
         return default
 
 
-def to_positive_int(val) -> int | None:
+def to_positive_int(val: object) -> int | None:
     """Try to convert val to a non-negative int. Return None if invalid."""
     try:
         if isinstance(val, int):
@@ -45,7 +56,7 @@ def format_currency(value: float) -> str:
 
 
 # Função para carregar dados de usuários
-def carregar_usuarios():
+def carregar_usuarios() -> dict[str, str]:
     if not os.path.exists(CONFIG_FILE):
         return {}
 
@@ -60,7 +71,7 @@ def carregar_usuarios():
 
 
 # Função para salvar novo usuário
-def salvar_usuario(usuario, senha):
+def salvar_usuario(usuario: str, senha: str) -> None:
     usuarios = carregar_usuarios()
     hashed = bcrypt.hashpw(senha.encode(), bcrypt.gensalt()).decode()
     usuarios[usuario] = hashed
@@ -69,14 +80,14 @@ def salvar_usuario(usuario, senha):
 
 
 # Função para recriar config.json padrão
-def criar_config_padrao():
+def criar_config_padrao() -> None:
     if not os.path.exists(CONFIG_FILE):
         salvar_usuario("admin", "admin123")
         st.info("Arquivo config.json criado com usuário padrão: admin/admin123")
 
 
 # Tela de login
-def autenticar_usuarios():
+def autenticar_usuarios() -> None:
     usuarios = carregar_usuarios()
 
     st.title("🔐 Login")
@@ -138,22 +149,25 @@ modo_lista = st.sidebar.radio(
     ["Gerar automaticamente", "Importar de JSON"],
 )
 
-if modo_lista == "Gerar automaticamente":
-    num_apts = st.sidebar.number_input(
-        "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
-    )
-    # pyrefly: ignore  # no-matching-overload
-    apartamentos = [f"{str(i + 1).zfill(2)}" for i in range(num_apts)]
-else:
-    json_text = st.sidebar.text_area(
-        "Cole a lista JSON:", height=150, placeholder='Ex: ["101", "102", "201", "202"]'
-    )
-    try:
-        apartamentos = json.loads(json_text)
-        if not isinstance(apartamentos, list):
-            raise ValueError
-    except Exception:
-        st.sidebar.error("Formato inválido. Forneça uma lista JSON válida.")
+match modo_lista:
+    case "Gerar automaticamente":
+        num_apts = st.sidebar.number_input(
+            "Número de apartamentos:", min_value=1, max_value=100, value=8, step=1
+        )
+        # pyrefly: ignore  # no-matching-overload
+        apartamentos = [f"{str(i + 1).zfill(2)}" for i in range(num_apts)]
+    case "Importar de JSON":
+        json_text = st.sidebar.text_area(
+            "Cole a lista JSON:", height=150, placeholder='Ex: ["101", "102", "201", "202"]'
+        )
+        try:
+            apartamentos = json.loads(json_text)
+            if not isinstance(apartamentos, list):
+                raise ValueError
+        except Exception:
+            st.sidebar.error("Formato inválido. Forneça uma lista JSON válida.")
+            apartamentos = []
+    case _:
         apartamentos = []
 
 st.sidebar.header("👥 Moradores por Apartamento")
@@ -193,7 +207,13 @@ with st.expander("📅 Preencha os dados da conta"):
 
 
 # Cálculo principal
-def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg) -> Dict[str, Any]:
+def calcular(
+    distrib: dict[str, object],
+    valor_fixo: float,
+    valor_variavel: float,
+    rec_agua: float,
+    rec_esg: float
+) -> CalculoResult:
     # Convert inputs to valid integers; ignore invalid entries
     distrib_clean: Dict[str, int] = {}
     for k, v in distrib.items():
@@ -214,14 +234,14 @@ def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg) -> Dict[str
                 "Valor Total (R$)": pd.Series(dtype=float),
             }
         )
-        return {
-            "df": empty_df,
-            "valor_fixo_corrigido": 0.0,
-            "valor_variavel_por_residente": 0.0,
-            "total_arrecadado": 0.0,
-            "valor_total_da_conta": round(float(total), 2),
-            "total_residentes": 0,
-        }
+        return CalculoResult(
+            df=empty_df,
+            valor_fixo_corrigido=0.0,
+            valor_variavel_por_residente=0.0,
+            total_arrecadado=0.0,
+            valor_total_da_conta=round(float(total), 2),
+            total_residentes=0,
+        )
 
     n_residentes = sum(distrib_clean.values())
 
@@ -245,14 +265,14 @@ def calcular(distrib, valor_fixo, valor_variavel, rec_agua, rec_esg) -> Dict[str
     # compute total as a pure python float (avoid incremental += type issues)
     total_pago = float(sum(d["Valor Total (R$)"] for d in detalhes))
 
-    return {
-        "df": pd.DataFrame(detalhes).sort_values("Apartamento"),
-        "valor_fixo_corrigido": round(v_fixo_corrigido, 2),
-        "valor_variavel_por_residente": round(v_var_pessoa, 2),
-        "total_arrecadado": round(float(total_pago), 2),
-        "valor_total_da_conta": round(float(total), 2),
-        "total_residentes": n_residentes,
-    }
+    return CalculoResult(
+        df=pd.DataFrame(detalhes).sort_values("Apartamento"),
+        valor_fixo_corrigido=round(v_fixo_corrigido, 2),
+        valor_variavel_por_residente=round(v_var_pessoa, 2),
+        total_arrecadado=round(float(total_pago), 2),
+        valor_total_da_conta=round(float(total), 2),
+        total_residentes=n_residentes,
+    )
 
 
 if st.button("🚀 Calcular"):
@@ -264,9 +284,12 @@ if st.button("🚀 Calcular"):
         recursos_hidr_esg,
     )
     df = resultado["df"]
+    if not isinstance(df, pd.DataFrame):
+        st.error("Erro interno: resultado['df'] não é um DataFrame.")
+        st.stop()
 
     # If result is empty (no valid apartments), show a helpful message
-    if df.empty:
+    if isinstance(df, pd.DataFrame) and df.empty:
         st.warning(
             "Nenhum apartamento válido encontrado. Verifique os valores informados no painel lateral."
         )
@@ -292,7 +315,7 @@ if st.button("🚀 Calcular"):
 
         # Tabela
         st.subheader("🏠 Distribuição por apartamento")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width='stretch')
 
         # Gráficos com Plotly
         colg1, colg2 = st.columns(2)
@@ -300,18 +323,19 @@ if st.button("🚀 Calcular"):
         with colg1:
             st.subheader("📊 Valor pago por apartamento")
             fig_bar = px.bar(df, x="Apartamento", y="Valor Total (R$)", text_auto=True)
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width='stretch')
 
         with colg2:
             st.subheader("🥧 Distribuição de moradores")
             fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, width='stretch')
 
         # Download
-        csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button(
-            "📅 Baixar resultado em CSV",
-            csv,
-            file_name="resultado_conta_agua.csv",
-            mime="text/csv",
-        )
+        if isinstance(df, pd.DataFrame):
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "📅 Baixar resultado em CSV",
+                csv,
+                file_name="resultado_conta_agua.csv",
+                mime="text/csv",
+            )

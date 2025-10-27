@@ -12,8 +12,9 @@ class ContaRequest(BaseModel):
     recursos_hidr_esg: float
 
 
+
 @app.post("/calcular-conta")
-def calcular(request: ContaRequest):
+def calcular(request: ContaRequest) -> dict[str, float | dict[str, float]]:
     resultado = calcular_conta_agua(
         request.valor_fixo,
         request.valor_variavel,

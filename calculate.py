@@ -1,6 +1,9 @@
 def calcular_conta_agua(
-    valor_fixo, valor_variavel, recursos_hidr_agua, recursos_hidr_esg
-):
+    valor_fixo: float,
+    valor_variavel: float,
+    recursos_hidr_agua: float,
+    recursos_hidr_esg: float
+) -> dict[str, float | dict[str, float]]:
     distribuicao_residentes = {
         "apartamento 01": 3,
         "apartamento 02": 3,
