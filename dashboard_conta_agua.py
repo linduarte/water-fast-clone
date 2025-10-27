@@ -327,8 +327,12 @@ if st.button("🚀 Calcular"):
 
         with colg2:
             st.subheader("🥧 Distribuição de moradores")
-            fig_pie = px.pie(df, values="Moradores", names="Apartamento", hole=0.3)
-            st.plotly_chart(fig_pie, use_container_width=True)
+            df_pie = df[df["Moradores"] > 0]
+            if not df_pie.empty:
+                fig_pie = px.pie(df_pie, values="Moradores", names="Apartamento", hole=0.3)
+                st.plotly_chart(fig_pie, use_container_width=True)
+            else:
+                st.info("Nenhum morador para exibir no gráfico de pizza.")
 
         # Download
         if isinstance(df, pd.DataFrame):
